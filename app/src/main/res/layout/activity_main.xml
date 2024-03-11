@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/clout"
     android:layout_width="match_parent"
@@ -30,5 +31,28 @@
             android:fitsSystemWindows="true" />
 
     </LinearLayout>
+
+    <EditText
+        android:id="@+id/urlInput"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="8dp"
+        android:ems="10"
+        android:hint="Enter URL"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/loadButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/rootLayout" />
+
+    <Button
+        android:id="@+id/loadButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:text="Load URL"
+        app:layout_constraintBottom_toBottomOf="@+id/urlInput"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/urlInput" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

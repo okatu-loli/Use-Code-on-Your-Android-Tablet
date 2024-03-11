@@ -26,6 +26,8 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Button
+import android.widget.EditText
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabsIntent
@@ -56,6 +58,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var myWebView: WebView
     private lateinit var progressBar: View
     private var uploadMessage: ValueCallback<Array<Uri>>? = null
+    private var lastLoadedUrl: String = "http://127.0.0.1:8080"
 
     companion object {
         private const val FILE_CHOOSER_REQUEST_CODE = 1
@@ -149,6 +152,9 @@ class MainActivity : AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        val loadButton: Button = findViewById(R.id.loadButton)
+        val urlInput: EditText = findViewById(R.id.urlInput)
 
         myWebView = findViewById(R.id.webview)
         var rootLayout: ViewGroup? = findViewById(R.id.rootLayout)
@@ -278,9 +284,12 @@ class MainActivity : AppCompatActivity() {
 
                 val uri = Uri.parse(url)
 
+                val lastLoadedUri = Uri.parse(lastLoadedUrl)
+                val lastLoadedHost = lastLoadedUri.host
+
                 //检测是否127.0.0.1
                 val host = uri.host
-                if (host != null && (host == "127.0.0.1" || host.endsWith(".127.0.0.1") || host == "localhost")) {
+                if (host != null && (host == "127.0.0.1" || host.endsWith(".127.0.0.1") || host == "localhost" || host == lastLoadedHost)) {
                     view.loadUrl(url)
                 } else {
                     val builder = MaterialAlertDialogBuilder(
@@ -355,7 +364,26 @@ class MainActivity : AppCompatActivity() {
 
         }
 
-        myWebView.loadUrl("http://127.0.0.1:8080")
+        val prefs = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        lastLoadedUrl = prefs.getString("LastURL", "http://127.0.0.1:8080") ?: "http://127.0.0.1:8080"
+
+        myWebView.loadUrl(lastLoadedUrl)
+
+        // 当点击加载按钮时，从输入框获取URL，更新lastLoadedUrl，并保存到SharedPreferences
+        loadButton.setOnClickListener {
+            val url = urlInput.text.toString().trim()
+            if (url.isNotEmpty()) {
+                lastLoadedUrl = url
+                myWebView.loadUrl(url) // 在WebView中加载这个URL
+
+                // 将新URL保存到SharedPreferences
+                prefs.edit().putString("LastURL", url).apply()
+
+                // 隐藏输入框和按钮
+                urlInput.visibility = View.GONE
+                loadButton.visibility = View.GONE
+            }
+        }
 
         //软键盘动画
         ViewCompat.setWindowInsetsAnimationCallback(
