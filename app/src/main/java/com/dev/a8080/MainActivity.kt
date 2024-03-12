@@ -17,6 +17,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
 import android.text.InputType
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -288,11 +289,13 @@ class MainActivity : AppCompatActivity() {
                 val lastLoadedUri = Uri.parse(lastLoadedUrl)
                 val lastLoadedHost = lastLoadedUri.host
 
-                //检测是否127.0.0.1
+                //检测是否127.0.0.1 和用户输入的url
                 val host = uri.host
                 if (host != null && (host == "127.0.0.1" || host.endsWith(".127.0.0.1") || host == "localhost" || host == lastLoadedHost)) {
                     view.loadUrl(url)
                 } else {
+                    val host = Uri.parse(lastLoadedUrl).host
+//                    Log.d("WebViewDebug", "Host: $host")
                     val builder = MaterialAlertDialogBuilder(
                         this@MainActivity,
                         com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog
@@ -508,22 +511,34 @@ class MainActivity : AppCompatActivity() {
         val input = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             hint = "输入url"
-            // 设置内边距，这里的参数是左、上、右、下边距，单位是像素
+            // 设置内边距
             val paddingInPixels = dpToPx(32)
             setPadding(paddingInPixels, paddingInPixels, paddingInPixels, paddingInPixels)
         }
         builder.setView(input)
         builder.setPositiveButton("加载") { dialog, _ ->
-            val url = input.text.toString().trim()
+            var url = input.text.toString().trim()
+            // 检查URL是否包含协议部分，如果没有，则默认添加"http://"
+            if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                url = "http://$url"
+            }
+//            Log.d("WebViewDebug", "URL: $url")
             if (url.isNotEmpty()) {
+                lastLoadedUrl = url // 更新lastLoadedUrl的值
                 myWebView.loadUrl(url)
+                // 将新的URL保存到SharedPreferences
+                val prefs = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+                prefs.edit().putString("LastURL", url).apply()
             }
             dialog.dismiss()
         }
-        builder.setNegativeButton("取消") { dialog, _ -> dialog.cancel() }
+        builder.setNegativeButton("取消") { dialog, _ ->
+            dialog.cancel()
+        }
 
         builder.show()
     }
+
 
     // 辅助函数，将dp单位转换为像素单位
     private fun dpToPx(dp: Int): Int {
