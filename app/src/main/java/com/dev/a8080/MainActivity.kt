@@ -16,12 +16,14 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
+import android.text.InputType
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.SslErrorHandler
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -59,6 +61,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var progressBar: View
     private var uploadMessage: ValueCallback<Array<Uri>>? = null
     private var lastLoadedUrl: String = "http://127.0.0.1:8080"
+    private var isPageLoadedSuccessfully = false
 
     companion object {
         private const val FILE_CHOOSER_REQUEST_CODE = 1
@@ -153,8 +156,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val loadButton: Button = findViewById(R.id.loadButton)
-        val urlInput: EditText = findViewById(R.id.urlInput)
 
         myWebView = findViewById(R.id.webview)
         var rootLayout: ViewGroup? = findViewById(R.id.rootLayout)
@@ -308,6 +309,12 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
 
+            override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
+                super.onReceivedError(view, request, error)
+                isPageLoadedSuccessfully = false
+                showUrlInputDialog()
+            }
+
             @SuppressLint("WebViewClientOnReceivedSslError")
             override fun onReceivedSslError(
                 view: WebView?, handler: SslErrorHandler?, error: SslError?
@@ -318,6 +325,7 @@ class MainActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 myWebView.requestLayout()
+                isPageLoadedSuccessfully = true
             }
         }
         myWebView.settings.userAgentString =
@@ -369,22 +377,6 @@ class MainActivity : AppCompatActivity() {
 
         myWebView.loadUrl(lastLoadedUrl)
 
-        // 当点击加载按钮时，从输入框获取URL，更新lastLoadedUrl，并保存到SharedPreferences
-        loadButton.setOnClickListener {
-            val url = urlInput.text.toString().trim()
-            if (url.isNotEmpty()) {
-                lastLoadedUrl = url
-                myWebView.loadUrl(url) // 在WebView中加载这个URL
-
-                // 将新URL保存到SharedPreferences
-                prefs.edit().putString("LastURL", url).apply()
-
-                // 隐藏输入框和按钮
-                urlInput.visibility = View.GONE
-                loadButton.visibility = View.GONE
-            }
-        }
-
         //软键盘动画
         ViewCompat.setWindowInsetsAnimationCallback(
             rootLayout,
@@ -420,6 +412,13 @@ class MainActivity : AppCompatActivity() {
                     return insets
                 }
             })
+        // 显示URL输入弹窗
+        // 延迟执行，以检查页面是否加载成功
+        myWebView.postDelayed({
+            if (!isPageLoadedSuccessfully) {
+                showUrlInputDialog()
+            }
+        }, 4000)
     }
 
     @Deprecated("Deprecated in Java")
@@ -502,6 +501,33 @@ class MainActivity : AppCompatActivity() {
             }
         }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    }
+
+    private fun showUrlInputDialog() {
+        val builder = MaterialAlertDialogBuilder(this)
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+            hint = "输入url"
+            // 设置内边距，这里的参数是左、上、右、下边距，单位是像素
+            val paddingInPixels = dpToPx(32)
+            setPadding(paddingInPixels, paddingInPixels, paddingInPixels, paddingInPixels)
+        }
+        builder.setView(input)
+        builder.setPositiveButton("加载") { dialog, _ ->
+            val url = input.text.toString().trim()
+            if (url.isNotEmpty()) {
+                myWebView.loadUrl(url)
+            }
+            dialog.dismiss()
+        }
+        builder.setNegativeButton("取消") { dialog, _ -> dialog.cancel() }
+
+        builder.show()
+    }
+
+    // 辅助函数，将dp单位转换为像素单位
+    private fun dpToPx(dp: Int): Int {
+        return (dp * resources.displayMetrics.density + 0.5f).toInt()
     }
 }
 
